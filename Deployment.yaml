@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-claudio-zamora
+  namespace: ns-claudio-zamora
+  labels:
+    app: claudio-zamora
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: claudio-zamora
+  template:
+    metadata:
+      labels:
+        app: claudio-zamora
+    spec:
+      containers:
+      - name: claudio-zamora
+        image: mi-app-node:latest
+        imagePullPolicy: Never
+        env:
+        - name: AMBIENTE
+          valueFrom:
+            configMapKeyRef:
+              name: config-claudio-zamora
+              key: AMBIENTE
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: secret-claudio-zamora
+              key: API_KEY
+        ports:
+        - name: http
+          containerPort: 3000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6

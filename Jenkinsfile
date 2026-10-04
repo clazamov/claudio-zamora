@@ -9,12 +9,12 @@ pipeline {
   }
   options { disableConcurrentBuilds(); timestamps() }
   parameters {
-    string(name: 'DOCKERHUB_USER', defaultValue: '', description: 'Usuario real de Docker Hub')
+    string(name: 'DOCKERHUB_USER', defaultValue: 'clazamov', description: 'Usuario real de Docker Hub')
     string(name: 'GHCR_USER', defaultValue: 'clazamov', description: 'Usuario/organización GitHub en minúsculas; confirmar')
     string(name: 'KUBECTL_VERSION', defaultValue: 'v1.37.0', description: 'Versión compatible con el servidor; confirmar disponibilidad')
   }
   environment {
-    IMAGE_NAME = 'laboratorio3'
+    IMAGE_NAME = 'claudiozamora'
     IMAGE_TAG = 'claudio-zamora'
   }
   stages {
@@ -82,19 +82,14 @@ pipeline {
     }
     stage('deploy') {
       steps {
-        withCredentials([string(credentialsId: 'app-api-key', variable: 'APP_API_KEY')]) {
-          sh '''set +x
-            set -eu
-            umask 077
-            trap 'rm -f .rendered.yaml' EXIT
-            node ci-render.cjs
-            # Namespace provisionado previamente por jenkins-rbac.yaml.
-            .ci-bin/kubectl apply --server-side --field-manager=jenkins -f .rendered.yaml
-            # El tag es fijo: forzar nuevos pods en cada despliegue.
-            .ci-bin/kubectl rollout restart deployment/app-claudio-zamora -n ns-claudio-zamora
-            .ci-bin/kubectl rollout status deployment/app-claudio-zamora -n ns-claudio-zamora --timeout=300s
-          '''
-        }
+        sh '''set -eu
+          trap 'rm -f .rendered.yaml' EXIT
+          .ci-bin/kubectl get secret secret-claudio-zamora -n ns-claudio-zamora -o name
+          node ci-render.cjs
+          .ci-bin/kubectl apply --server-side --field-manager=jenkins -f .rendered.yaml
+          .ci-bin/kubectl rollout restart deployment/app-claudio-zamora -n ns-claudio-zamora
+          .ci-bin/kubectl rollout status deployment/app-claudio-zamora -n ns-claudio-zamora --timeout=300s
+        '''
       }
     }
   }

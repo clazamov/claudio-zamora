@@ -1,8 +1,7 @@
 const fs = require('node:fs');
-if (!process.env.APP_API_KEY || !process.env.DOCKER_IMAGE) throw new Error('Falta API_KEY o imagen');
+if (!process.env.DOCKER_IMAGE) throw new Error('Falta la imagen');
 let text = fs.readFileSync('Laboratorio3.yaml', 'utf8');
-// El Namespace se aplica una sola vez con la configuración inicial de RBAC.
+// Namespace creado por la configuración inicial; no se modifica el Secret.
 text = text.split('---\n').slice(1).join('---\n');
-text = text.replace('__IMAGE__', process.env.DOCKER_IMAGE)
-           .replace('__API_KEY_BASE64__', Buffer.from(process.env.APP_API_KEY).toString('base64'));
+text = text.replace(/image: docker\.io\/clazamov\/claudiozamora:claudio-zamora/, 'image: ' + process.env.DOCKER_IMAGE);
 fs.writeFileSync('.rendered.yaml', text, {mode: 0o600});

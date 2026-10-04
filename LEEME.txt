@@ -1,0 +1,19 @@
+Configuracion para Kind laboratorio y agente Jenkins wsl2.
+
+1. Copiar Jenkinsfile, Dockerfile, Laboratorio3.yaml y Deployment.yaml a la raiz del repositorio. Laboratorio3.yaml ahora contiene Namespace, ConfigMap, Service e Ingress; Deployment.yaml contiene el Deployment. No contiene valores secretos.
+2. Mantener package.json, codigo fuente, tests, pnpm-workspace.yaml y .dockerignore en Git. Excluir node_modules, dist, .env y kubeconfig del contexto Docker. No excluir test: lo necesita la construccion.
+3. Agente wsl2 conectado, con git, docker, kind, kubectl y python3. Debe usar el mismo daemon Docker que aloja el cluster Kind. No se confirma su disponibilidad desde esta sesion.
+4. Jenkins > Manage Jenkins > Credentials > System > Global credentials > Add Credentials:
+   - Secret text, ID laboratorio3-api-key: valor real de API_KEY.
+   - Secret file, ID kubeconfig-laboratorio: kubeconfig autocontenido para kind-laboratorio. En WSL: kubectl config view --raw --minify --flatten --context=kind-laboratorio > /tmp/kubeconfig-laboratorio. Este archivo es sensible: subirlo como credencial, no a Git, y eliminar la copia temporal despues.
+5. Crear un job Pipeline, Definition: Pipeline script from SCM; SCM: Git; URL https://github.com/clazamov/claudio-zamora.git; Branch */main; Script Path Jenkinsfile. Requiere plugins Pipeline, Git y Credentials Binding. Para repositorio privado configurar una credencial de Git adicional.
+6. Subir estos cambios a main y seleccionar Build Now.
+7. Pipeline ejecuta cobertura unitaria y e2e dentro de docker build, compila, carga la imagen en Kind, crea/actualiza el Secret y aplica los manifiestos. Una prueba fallida impide el despliegue. Las pruebas e2e deben poder funcionar dentro del build; no se dispone de sus fuentes para confirmarlo.
+8. Ingress laboratorio3.local requiere controlador nginx operativo y resolucion del hostname hacia el ingreso del cluster. Validar: curl -i -H 'Host: laboratorio3.local' http://localhost/lab (si el ingreso esta publicado en localhost:80).
+9. API_KEY permanece en Jenkins Credentials y en un Secret Kubernetes, referenciado mediante secretKeyRef. Base64 no es cifrado; los Secrets requieren permisos RBAC y, para entornos que lo exijan, cifrado en reposo.
+10. Si anteriormente guardaste un valor real en Git, quitarlo del YAML no lo borra del historial: rotarlo. No se ha verificado el historial del repositorio.
+
+Verificacion realizada: parseo YAML y consistencia de puertos, referencias Secret e imagen. No se ha ejecutado el build ni Jenkins ni el despliegue: esta sesion no tiene el codigo completo ni acceso a tu agente/clúster.
+Fuentes: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/
+https://kind.sigs.k8s.io/docs/user/quick-start/
+https://kubernetes.io/docs/concepts/configuration/secret/

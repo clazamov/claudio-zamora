@@ -1,8 +1,9 @@
-# API_KEY permanece en secret-claudio-zamora; se crea previamente en el clúster y el pipeline no lo modifica.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ns-claudio-zamora
+  labels:
+    app: claudio-zamora
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -10,13 +11,24 @@ metadata:
   name: config-claudio-zamora
   namespace: ns-claudio-zamora
 data:
-  AMBIENTE: develop
+  AMBIENTE: "develop"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-claudio-zamora
+  namespace: ns-claudio-zamora
+type: Opaque
+stringData:
+  API_KEY: "pgpassword-app" # Valor de ejemplo para el laboratorio.
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: app-claudio-zamora
   namespace: ns-claudio-zamora
+  labels:
+    app: claudio-zamora
 spec:
   replicas: 2
   selector:
@@ -29,11 +41,8 @@ spec:
     spec:
       containers:
         - name: claudio-zamora
-          image: docker.io/clazamov/claudiozamora:claudio-zamora
-          imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 3000
+          image: mi-app-node:latest
+          imagePullPolicy: Never
           env:
             - name: AMBIENTE
               valueFrom:
@@ -45,31 +54,42 @@ spec:
                 secretKeyRef:
                   name: secret-claudio-zamora
                   key: API_KEY
+          ports:
+            - name: http
+              containerPort: 3000
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: "500m"
+              memory: "512Mi"
           readinessProbe:
             tcpSocket:
               port: http
             initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             tcpSocket:
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: svc-claudio-zamora
   namespace: ns-claudio-zamora
+  labels:
+    app: claudio-zamora
 spec:
-  type: ClusterIP
   selector:
     app: claudio-zamora
+  type: ClusterIP
   ports:
     - name: http
       port: 80
@@ -80,16 +100,18 @@ kind: Ingress
 metadata:
   name: claudio-zamora
   namespace: ns-claudio-zamora
+  labels:
+    app: claudio-zamora
 spec:
   ingressClassName: nginx
   rules:
     - host: laboratorio3.local
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - pathType: Prefix
+            path: /
             backend:
               service:
                 name: svc-claudio-zamora
                 port:
-                  number: 80
+                  number: 8080
