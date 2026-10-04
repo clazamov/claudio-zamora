@@ -1,0 +1,16 @@
+name: laboratorio3_claudio_zamora
+
+services:
+  web:
+    image: wordpress
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - wordpress-network
+
+networks:
+  wordpress-network:
+    driver: bridge
+
+ 

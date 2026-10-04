@@ -20,6 +20,9 @@ RUN pnpm run build
 
 # Eliminar dependencias de desarrollo
 RUN pnpm prune --prod
+RUN pnpm run test
+RUN pnpm run test:e2e
+RUN pnpm run test:cov
 
 # Etapa 2: ejecutar la aplicacion
 FROM node:24-alpine AS runtime
