@@ -1,5 +1,11 @@
-README.md
-dist/
-node_modules/
-Dockerfile
-.dockerignore
+node_modules
+dist
+coverage
+.git
+.env
+.env.*
+*.pem
+*.key
+.rendered.yaml
+ci-secrets
+.ci-bin
