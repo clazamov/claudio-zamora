@@ -5,7 +5,7 @@ metadata:
     app: agente-claudio-zamora
 spec:
   serviceAccountName: jenkins
-    containers:
+  containers:
     - name: node-tool
       image: node:24-alpine
       command: ['cat']
