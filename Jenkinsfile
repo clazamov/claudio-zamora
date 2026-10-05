@@ -75,7 +75,7 @@ pipeline {
       steps {
         container('docker') {
           withCredentials([
-            usernamePassword(credentialsId: 'dockerhub-registry', usernameVariable: 'DH_USER', passwordVariable: 'DH_TOKEN'),
+            usernamePassword(credentialsId: 'dockerhub-token', usernameVariable: 'DH_USER', passwordVariable: 'DH_TOKEN'),
             usernamePassword(credentialsId: 'ghcr-registry', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')
           ]) {
             sh '''set +x
