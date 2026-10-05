@@ -15,6 +15,7 @@ pipeline {
     string(name: 'KUBECTL_VERSION', defaultValue: 'v1.37.0', description: 'Versión compatible con el servidor; confirmar disponibilidad')
   }
   environment {
+    DOCKER_HOST = 'tcp://127.0.0.1:2375'
     IMAGE_NAME = 'claudiozamora'
     IMAGE_TAG = 'claudio-zamora'
   }
