@@ -7,7 +7,7 @@ pipeline {
       defaultContainer 'node'
     }
   }
-  options { disableConcurrentBuilds(); timestamps() }
+  options { disableConcurrentBuilds() }
   parameters {
     booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Activar esta rama en el ambiente compartido')
     string(name: 'DOCKERHUB_USER', defaultValue: 'clazamov', description: 'Usuario real de Docker Hub')
