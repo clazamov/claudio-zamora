@@ -1,0 +1,461 @@
+[1mdiff --git a/.dockerignore:Zone.Identifier b/.dockerignore:Zone.Identifier[m
+[1mnew file mode 100644[m
+[1mindex 0000000..dfe961c[m
+[1m--- /dev/null[m
+[1m+++ b/.dockerignore:Zone.Identifier[m
+[36m@@ -0,0 +1,4 @@[m
+[32m+[m[32m[ZoneTransfer][m[41m[m
+[32m+[m[32mZoneId=3[m[41m[m
+[32m+[m[32mReferrerUrl=https://chatgpt.com/[m[41m[m
+[32m+[m[32mHostUrl=https://chatgpt.com/[m[41m[m
+[1mdiff --git a/Deployment.yaml b/Deployment.yaml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e357565[m
+[1m--- /dev/null[m
+[1m+++ b/Deployment.yaml[m
+[36m@@ -0,0 +1,56 @@[m
+[32m+[m[32mapiVersion: apps/v1[m
+[32m+[m[32mkind: Deployment[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: app-claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32m  labels:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32mspec:[m
+[32m+[m[32m  replicas: 2[m
+[32m+[m[32m  selector:[m
+[32m+[m[32m    matchLabels:[m
+[32m+[m[32m      app: claudio-zamora[m
+[32m+[m[32m  template:[m
+[32m+[m[32m    metadata:[m
+[32m+[m[32m      labels:[m
+[32m+[m[32m        app: claudio-zamora[m
+[32m+[m[32m    spec:[m
+[32m+[m[32m      containers:[m
+[32m+[m[32m      - name: claudio-zamora[m
+[32m+[m[32m        image: mi-app-node:latest[m
+[32m+[m[32m        imagePullPolicy: Never[m
+[32m+[m[32m        env:[m
+[32m+[m[32m        - name: AMBIENTE[m
+[32m+[m[32m          valueFrom:[m
+[32m+[m[32m            configMapKeyRef:[m
+[32m+[m[32m              name: config-claudio-zamora[m
+[32m+[m[32m              key: AMBIENTE[m
+[32m+[m[32m        - name: API_KEY[m
+[32m+[m[32m          valueFrom:[m
+[32m+[m[32m            secretKeyRef:[m
+[32m+[m[32m              name: secret-claudio-zamora[m
+[32m+[m[32m              key: API_KEY[m
+[32m+[m[32m        ports:[m
+[32m+[m[32m        - name: http[m
+[32m+[m[32m          containerPort: 3000[m
+[32m+[m[32m        resources:[m
+[32m+[m[32m          requests:[m
+[32m+[m[32m            cpu: 100m[m
+[32m+[m[32m            memory: 128Mi[m
+[32m+[m[32m          limits:[m
+[32m+[m[32m            cpu: 500m[m
+[32m+[m[32m            memory: 512Mi[m
+[32m+[m[32m        readinessProbe:[m
+[32m+[m[32m          tcpSocket:[m
+[32m+[m[32m            port: http[m
+[32m+[m[32m          initialDelaySeconds: 10[m
+[32m+[m[32m          periodSeconds: 10[m
+[32m+[m[32m          timeoutSeconds: 3[m
+[32m+[m[32m          failureThreshold: 3[m
+[32m+[m[32m        livenessProbe:[m
+[32m+[m[32m          tcpSocket:[m
+[32m+[m[32m            port: http[m
+[32m+[m[32m          initialDelaySeconds: 20[m
+[32m+[m[32m          periodSeconds: 20[m
+[32m+[m[32m          timeoutSeconds: 5[m
+[32m+[m[32m          failureThreshold: 6[m
+[1mdiff --git a/Dockerfile2 b/Dockerfile2[m
+[1mnew file mode 100644[m
+[1mindex 0000000..813b0c9[m
+[1m--- /dev/null[m
+[1m+++ b/Dockerfile2[m
+[36m@@ -0,0 +1,41 @@[m
+[32m+[m[32m# Etapa 1: instalar dependencias y compilar[m
+[32m+[m[32mFROM node:24-alpine AS build[m
+[32m+[m
+[32m+[m[32mWORKDIR /usr/app[m
+[32m+[m[32mRUN corepack enable[m
+[32m+[m
+[32m+[m[32mCOPY package*.json ./[m
+[32m+[m[32mCOPY pnpm-workspace.yaml ./[m
+[32m+[m[32m# Si existe pnpm-lock.yaml, copiarlo aqui y usar --frozen-lockfile.[m
+[32m+[m[32mRUN pnpm install[m
+[32m+[m
+[32m+[m[32m# Excluir node_modules y dist mediante .dockerignore.[m
+[32m+[m[32mCOPY . .[m
+[32m+[m
+[32m+[m[32m# Ejecutar pruebas unitarias y generar cobertura[m
+[32m+[m[32mRUN pnpm run test:cov --runInBand[m
+[32m+[m
+[32m+[m[32m# Compilar[m
+[32m+[m[32mRUN pnpm run build[m
+[32m+[m
+[32m+[m[32m# Eliminar dependencias de desarrollo[m
+[32m+[m[32mRUN pnpm prune --prod[m
+[32m+[m[32mRUN pnpm run test[m
+[32m+[m[32mRUN pnpm run test:e2e[m
+[32m+[m[32mRUN pnpm run test:cov[m
+[32m+[m
+[32m+[m[32m# Etapa 2: ejecutar la aplicacion[m
+[32m+[m[32mFROM node:24-alpine AS runtime[m
+[32m+[m
+[32m+[m[32mWORKDIR /usr/app[m
+[32m+[m[32mENV NODE_ENV=production[m
+[32m+[m
+[32m+[m[32mCOPY --from=build --chown=node:node /usr/app/package.json ./package.json[m
+[32m+[m[32mCOPY --from=build --chown=node:node /usr/app/node_modules ./node_modules[m
+[32m+[m[32mCOPY --from=build --chown=node:node /usr/app/dist ./dist[m
+[32m+[m
+[32m+[m[32mUSER node[m
+[32m+[m[32mEXPOSE 3000[m
+[32m+[m
+[32m+[m[32m# Confirmar la ruta de entrada con el resultado de pnpm run build.[m
+[32m+[m[32mCMD ["node", "dist/main.js"][m
+[1mdiff --git a/Jenkinsfile b/Jenkinsfile[m
+[1mindex 2cf227f..b2a33e7 100644[m
+[1m--- a/Jenkinsfile[m
+[1m+++ b/Jenkinsfile[m
+[36m@@ -9,12 +9,12 @@[m [mpipeline {[m
+   }[m
+   options { disableConcurrentBuilds(); timestamps() }[m
+   parameters {[m
+[31m-    string(name: 'DOCKERHUB_USER', defaultValue: '', description: 'Usuario real de Docker Hub')[m
+[32m+[m[32m    string(name: 'DOCKERHUB_USER', defaultValue: 'clazamov', description: 'Usuario real de Docker Hub')[m
+     string(name: 'GHCR_USER', defaultValue: 'clazamov', description: 'Usuario/organización GitHub en minúsculas; confirmar')[m
+     string(name: 'KUBECTL_VERSION', defaultValue: 'v1.37.0', description: 'Versión compatible con el servidor; confirmar disponibilidad')[m
+   }[m
+   environment {[m
+[31m-    IMAGE_NAME = 'laboratorio3'[m
+[32m+[m[32m    IMAGE_NAME = 'claudiozamora'[m
+     IMAGE_TAG = 'claudio-zamora'[m
+   }[m
+   stages {[m
+[36m@@ -82,19 +82,14 @@[m [mpipeline {[m
+     }[m
+     stage('deploy') {[m
+       steps {[m
+[31m-        withCredentials([string(credentialsId: 'app-api-key', variable: 'APP_API_KEY')]) {[m
+[31m-          sh '''set +x[m
+[31m-            set -eu[m
+[31m-            umask 077[m
+[31m-            trap 'rm -f .rendered.yaml' EXIT[m
+[31m-            node ci-render.cjs[m
+[31m-            # Namespace provisionado previamente por jenkins-rbac.yaml.[m
+[31m-            .ci-bin/kubectl apply --server-side --field-manager=jenkins -f .rendered.yaml[m
+[31m-            # El tag es fijo: forzar nuevos pods en cada despliegue.[m
+[31m-            .ci-bin/kubectl rollout restart deployment/app-claudio-zamora -n ns-claudio-zamora[m
+[31m-            .ci-bin/kubectl rollout status deployment/app-claudio-zamora -n ns-claudio-zamora --timeout=300s[m
+[31m-          '''[m
+[31m-        }[m
+[32m+[m[32m        sh '''set -eu[m
+[32m+[m[32m          trap 'rm -f .rendered.yaml' EXIT[m
+[32m+[m[32m          .ci-bin/kubectl get secret secret-claudio-zamora -n ns-claudio-zamora -o name[m
+[32m+[m[32m          node ci-render.cjs[m
+[32m+[m[32m          .ci-bin/kubectl apply --server-side --field-manager=jenkins -f .rendered.yaml[m
+[32m+[m[32m          .ci-bin/kubectl rollout restart deployment/app-claudio-zamora -n ns-claudio-zamora[m
+[32m+[m[32m          .ci-bin/kubectl rollout status deployment/app-claudio-zamora -n ns-claudio-zamora --timeout=300s[m
+[32m+[m[32m        '''[m
+       }[m
+     }[m
+   }[m
+[1mdiff --git a/LEEME.txt b/LEEME.txt[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d33d757[m
+[1m--- /dev/null[m
+[1m+++ b/LEEME.txt[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32mConfiguracion para Kind laboratorio y agente Jenkins wsl2.[m
+[32m+[m
+[32m+[m[32m1. Copiar Jenkinsfile, Dockerfile, Laboratorio3.yaml y Deployment.yaml a la raiz del repositorio. Laboratorio3.yaml ahora contiene Namespace, ConfigMap, Service e Ingress; Deployment.yaml contiene el Deployment. No contiene valores secretos.[m
+[32m+[m[32m2. Mantener package.json, codigo fuente, tests, pnpm-workspace.yaml y .dockerignore en Git. Excluir node_modules, dist, .env y kubeconfig del contexto Docker. No excluir test: lo necesita la construccion.[m
+[32m+[m[32m3. Agente wsl2 conectado, con git, docker, kind, kubectl y python3. Debe usar el mismo daemon Docker que aloja el cluster Kind. No se confirma su disponibilidad desde esta sesion.[m
+[32m+[m[32m4. Jenkins > Manage Jenkins > Credentials > System > Global credentials > Add Credentials:[m
+[32m+[m[32m   - Secret text, ID laboratorio3-api-key: valor real de API_KEY.[m
+[32m+[m[32m   - Secret file, ID kubeconfig-laboratorio: kubeconfig autocontenido para kind-laboratorio. En WSL: kubectl config view --raw --minify --flatten --context=kind-laboratorio > /tmp/kubeconfig-laboratorio. Este archivo es sensible: subirlo como credencial, no a Git, y eliminar la copia temporal despues.[m
+[32m+[m[32m5. Crear un job Pipeline, Definition: Pipeline script from SCM; SCM: Git; URL https://github.com/clazamov/claudio-zamora.git; Branch */main; Script Path Jenkinsfile. Requiere plugins Pipeline, Git y Credentials Binding. Para repositorio privado configurar una credencial de Git adicional.[m
+[32m+[m[32m6. Subir estos cambios a main y seleccionar Build Now.[m
+[32m+[m[32m7. Pipeline ejecuta cobertura unitaria y e2e dentro de docker build, compila, carga la imagen en Kind, crea/actualiza el Secret y aplica los manifiestos. Una prueba fallida impide el despliegue. Las pruebas e2e deben poder funcionar dentro del build; no se dispone de sus fuentes para confirmarlo.[m
+[32m+[m[32m8. Ingress laboratorio3.local requiere controlador nginx operativo y resolucion del hostname hacia el ingreso del cluster. Validar: curl -i -H 'Host: laboratorio3.local' http://localhost/lab (si el ingreso esta publicado en localhost:80).[m
+[32m+[m[32m9. API_KEY permanece en Jenkins Credentials y en un Secret Kubernetes, referenciado mediante secretKeyRef. Base64 no es cifrado; los Secrets requieren permisos RBAC y, para entornos que lo exijan, cifrado en reposo.[m
+[32m+[m[32m10. Si anteriormente guardaste un valor real en Git, quitarlo del YAML no lo borra del historial: rotarlo. No se ha verificado el historial del repositorio.[m
+[32m+[m
+[32m+[m[32mVerificacion realizada: parseo YAML y consistencia de puertos, referencias Secret e imagen. No se ha ejecutado el build ni Jenkins ni el despliegue: esta sesion no tiene el codigo completo ni acceso a tu agente/clúster.[m
+[32m+[m[32mFuentes: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/[m
+[32m+[m[32mhttps://kind.sigs.k8s.io/docs/user/quick-start/[m
+[32m+[m[32mhttps://kubernetes.io/docs/concepts/configuration/secret/[m
+[1mdiff --git a/Laboratorio3-2.yaml b/Laboratorio3-2.yaml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..1f16b0a[m
+[1m--- /dev/null[m
+[1m+++ b/Laboratorio3-2.yaml[m
+[36m@@ -0,0 +1,117 @@[m
+[32m+[m[32mapiVersion: v1[m
+[32m+[m[32mkind: Namespace[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: ns-claudio-zamora[m
+[32m+[m[32m  labels:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32m---[m
+[32m+[m[32mapiVersion: v1[m
+[32m+[m[32mkind: ConfigMap[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: config-claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32mdata:[m
+[32m+[m[32m  AMBIENTE: "develop"[m
+[32m+[m[32m---[m
+[32m+[m[32mapiVersion: v1[m
+[32m+[m[32mkind: Secret[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: secret-claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32mtype: Opaque[m
+[32m+[m[32mstringData:[m
+[32m+[m[32m  API_KEY: "pgpassword-app" # Valor de ejemplo para el laboratorio.[m
+[32m+[m[32m---[m
+[32m+[m[32mapiVersion: apps/v1[m
+[32m+[m[32mkind: Deployment[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: app-claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32m  labels:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32mspec:[m
+[32m+[m[32m  replicas: 2[m
+[32m+[m[32m  selector:[m
+[32m+[m[32m    matchLabels:[m
+[32m+[m[32m      app: claudio-zamora[m
+[32m+[m[32m  template:[m
+[32m+[m[32m    metadata:[m
+[32m+[m[32m      labels:[m
+[32m+[m[32m        app: claudio-zamora[m
+[32m+[m[32m    spec:[m
+[32m+[m[32m      containers:[m
+[32m+[m[32m        - name: claudio-zamora[m
+[32m+[m[32m          image: mi-app-node:latest[m
+[32m+[m[32m          imagePullPolicy: Never[m
+[32m+[m[32m          env:[m
+[32m+[m[32m            - name: AMBIENTE[m
+[32m+[m[32m              valueFrom:[m
+[32m+[m[32m                configMapKeyRef:[m
+[32m+[m[32m                  name: config-claudio-zamora[m
+[32m+[m[32m                  key: AMBIENTE[m
+[32m+[m[32m            - name: API_KEY[m
+[32m+[m[32m              valueFrom:[m
+[32m+[m[32m                secretKeyRef:[m
+[32m+[m[32m                  name: secret-claudio-zamora[m
+[32m+[m[32m                  key: API_KEY[m
+[32m+[m[32m          ports:[m
+[32m+[m[32m            - name: http[m
+[32m+[m[32m              containerPort: 3000[m
+[32m+[m[32m          resources:[m
+[32m+[m[32m            requests:[m
+[32m+[m[32m              cpu: "100m"[m
+[32m+[m[32m              memory: "128Mi"[m
+[32m+[m[32m            limits:[m
+[32m+[m[32m              cpu: "500m"[m
+[32m+[m[32m              memory: "512Mi"[m
+[32m+[m[32m          readinessProbe:[m
+[32m+[m[32m            tcpSocket:[m
+[32m+[m[32m              port: http[m
+[32m+[m[32m            initialDelaySeconds: 10[m
+[32m+[m[32m            periodSeconds: 10[m
+[32m+[m[32m            timeoutSeconds: 3[m
+[32m+[m[32m            failureThreshold: 3[m
+[32m+[m[32m          livenessProbe:[m
+[32m+[m[32m            tcpSocket:[m
+[32m+[m[32m              port: http[m
+[32m+[m[32m            initialDelaySeconds: 20[m
+[32m+[m[32m            periodSeconds: 20[m
+[32m+[m[32m            timeoutSeconds: 5[m
+[32m+[m[32m            failureThreshold: 6[m
+[32m+[m[32m---[m
+[32m+[m[32mapiVersion: v1[m
+[32m+[m[32mkind: Service[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: svc-claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32m  labels:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32mspec:[m
+[32m+[m[32m  selector:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32m  type: ClusterIP[m
+[32m+[m[32m  ports:[m
+[32m+[m[32m    - name: http[m
+[32m+[m[32m      port: 80[m
+[32m+[m[32m      targetPort: http[m
+[32m+[m[32m---[m
+[32m+[m[32mapiVersion: networking.k8s.io/v1[m
+[32m+[m[32mkind: Ingress[m
+[32m+[m[32mmetadata:[m
+[32m+[m[32m  name: claudio-zamora[m
+[32m+[m[32m  namespace: ns-claudio-zamora[m
+[32m+[m[32m  labels:[m
+[32m+[m[32m    app: claudio-zamora[m
+[32m+[m[32mspec:[m
+[32m+[m[32m  ingressClassName: nginx[m
+[32m+[m[32m  rules:[m
+[32m+[m[32m    - host: laboratorio3.local[m
+[32m+[m[32m      http:[m
+[32m+[m[32m        paths:[m
+[32m+[m[32m          - pathType: Prefix[m
+[32m+[m[32m            path: /[m
+[32m+[m[32m            backend:[m
+[32m+[m[32m              service:[m
+[32m+[m[32m                name: svc-claudio-zamora[m
+[32m+[m[32m                port:[m
+[32m+[m[32m                  number: 8080[m
+[1mdiff --git a/Laboratorio3.yaml b/Laboratorio3.yaml[m
+[1mindex 0a4a4ff..a308996 100644[m
+[1m--- a/Laboratorio3.yaml[m
+[1m+++ b/Laboratorio3.yaml[m
+[36m@@ -1,3 +1,4 @@[m
+[32m+[m[32m# API_KEY permanece en secret-claudio-zamora; se crea previamente en el clúster y el pipeline no lo modifica.[m
+ apiVersion: v1[m
+ kind: Namespace[m
+ metadata:[m
+[36m@@ -11,15 +12,6 @@[m [mmetadata:[m
+ data:[m
+   AMBIENTE: develop[m
+ ---[m
+[31m-apiVersion: v1[m
+[31m-kind: Secret[m
+[31m-metadata:[m
+[31m-  name: secret-claudio-zamora[m
+[31m-  namespace: ns-claudio-zamora[m
+[31m-type: Opaque[m
+[31m-data:[m
+[31m-  API_KEY: __API_KEY_BASE64__[m
+[31m----[m
+ apiVersion: apps/v1[m
+ kind: Deployment[m
+ metadata:[m
+[36m@@ -37,7 +29,7 @@[m [mspec:[m
+     spec:[m
+       containers:[m
+         - name: claudio-zamora[m
+[31m-          image: __IMAGE__[m
+[32m+[m[32m          image: docker.io/clazamov/claudiozamora:claudio-zamora[m
+           imagePullPolicy: Always[m
+           ports:[m
+             - name: http[m
+[1mdiff --git a/ci-render.cjs b/ci-render.cjs[m
+[1mindex 1980977..7b2d1ea 100644[m
+[1m--- a/ci-render.cjs[m
+[1m+++ b/ci-render.cjs[m
+[36m@@ -1,8 +1,7 @@[m
+ const fs = require('node:fs');[m
+[31m-if (!process.env.APP_API_KEY || !process.env.DOCKER_IMAGE) throw new Error('Falta API_KEY o imagen');[m
+[32m+[m[32mif (!process.env.DOCKER_IMAGE) throw new Error('Falta la imagen');[m
+ let text = fs.readFileSync('Laboratorio3.yaml', 'utf8');[m
+[31m-// El Namespace se aplica una sola vez con la configuración inicial de RBAC.[m
+[32m+[m[32m// Namespace creado por la configuración inicial; no se modifica el Secret.[m
+ text = text.split('---\n').slice(1).join('---\n');[m
+[31m-text = text.replace('__IMAGE__', process.env.DOCKER_IMAGE)[m
+[31m-           .replace('__API_KEY_BASE64__', Buffer.from(process.env.APP_API_KEY).toString('base64'));[m
+[32m+[m[32mtext = text.replace(/image: docker\.io\/clazamov\/claudiozamora:claudio-zamora/, 'image: ' + process.env.DOCKER_IMAGE);[m
+ fs.writeFileSync('.rendered.yaml', text, {mode: 0o600});[m
+[1mdiff --git a/crear-secret.sh b/crear-secret.sh[m
+[1mnew file mode 100644[m
+[1mindex 0000000..ba35273[m
+[1m--- /dev/null[m
+[1m+++ b/crear-secret.sh[m
+[36m@@ -0,0 +1,18 @@[m
+[32m+[m[32m#!/usr/bin/env bash[m
+[32m+[m[32mset -euo pipefail[m
+[32m+[m[32mset +x[m
+[32m+[m[32mkubectl get namespace ns-claudio-zamora >/dev/null[m
+[32m+[m[32mif kubectl get secret secret-claudio-zamora -n ns-claudio-zamora >/dev/null 2>&1; then[m
+[32m+[m[32m  echo 'El Secret ya existe; no se modifica.'[m
+[32m+[m[32m  exit 0[m
+[32m+[m[32mfi[m
+[32m+[m[32mread -r -s -p 'Introduce API_KEY: ' laboratorio_api_key[m
+[32m+[m[32mprintf '\n'[m
+[32m+[m[32mif [ -z "$laboratorio_api_key" ]; then[m
+[32m+[m[32m  echo 'API_KEY no puede estar vacía.' >&2[m
+[32m+[m[32m  exit 1[m
+[32m+[m[32mfi[m
+[32m+[m[32m# El valor se envía por stdin; no queda en argumentos, archivos ni Git.[m
+[32m+[m[32mprintf '%s' "$laboratorio_api_key" | kubectl create secret generic secret-claudio-zamora \[m
+[32m+[m[32m  -n ns-claudio-zamora --from-file=API_KEY=/dev/stdin[m
+[32m+[m[32munset laboratorio_api_key[m
+[1mdiff --git a/dockerignore b/dockerignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b0b71e8[m
+[1m--- /dev/null[m
+[1m+++ b/dockerignore[m
+[36m@@ -0,0 +1,11 @@[m
+[32m+[m[32mnode_modules[m
+[32m+[m[32mdist[m
+[32m+[m[32mcoverage[m
+[32m+[m[32m.git[m
+[32m+[m[32m.env[m
+[32m+[m[32m.env.*[m
+[32m+[m[32m*.pem[m
+[32m+[m[32m*.key[m
+[32m+[m[32m.rendered.yaml[m
+[32m+[m[32mci-secrets[m
+[32m+[m[32m.ci-bin[m
+[1mdiff --git a/dockerignore:Zone.Identifier b/dockerignore:Zone.Identifier[m
+[1mnew file mode 100644[m
+[1mindex 0000000..6d5d7c0[m
+[1m--- /dev/null[m
+[1m+++ b/dockerignore:Zone.Identifier[m
+[36m@@ -0,0 +1,4 @@[m
+[32m+[m[32m[ZoneTransfer][m[41m[m
+[32m+[m[32mZoneId=3[m[41m[m
+[32m+[m[32mReferrerUrl=https://chatgpt.com/[m[41m[m
+[32m+[m[32mHostUrl=https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-0750-820e-907f-b9edb0f1064c/raw?se=2026-10-04T21%3A04%3A29Z&sp=r&sv=2026-02-06&sr=b&scid=313ce49d-f6f1-42ba-98a2-7aff36dd1191&skoid=fbc53507-c13f-4907-b4dd-0e03c91f5ad8&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-04T12%3A53%3A54Z&ske=2026-10-05T12%3A53%3A54Z&sks=b&skv=2026-02-06&sig=v65cxr0nSoqpSnyNh40WoZjJj2MioPgr6dEn2mFW7jI%3D[m[41m[m
+[1mdiff --git a/jenkins-rbac.yaml b/jenkins-rbac.yaml[m
+[1mindex 4db6d2d..d483485 100644[m
+[1m--- a/jenkins-rbac.yaml[m
+[1m+++ b/jenkins-rbac.yaml[m
+[36m@@ -16,11 +16,15 @@[m [mmetadata:[m
+   namespace: ns-claudio-zamora[m
+ rules:[m
+   - apiGroups: [""][m
+[31m-    resources: ["configmaps", "secrets", "services"][m
+[32m+[m[32m    resources: ["configmaps", "services"][m
+     verbs: ["get", "create", "patch", "update"][m
+   - apiGroups: [""][m
+     resources: ["pods"][m
+     verbs: ["get", "list", "watch"][m
+[32m+[m[32m  - apiGroups: [""][m
+[32m+[m[32m    resources: ["secrets"][m
+[32m+[m[32m    resourceNames: ["secret-claudio-zamora"][m
+[32m+[m[32m    verbs: ["get"][m
+   - apiGroups: ["apps"][m
+     resources: ["deployments"][m
+     verbs: ["get", "list", "watch", "create", "patch", "update"][m
+[1mdiff --git a/src/lectura-variables.ts b/src/lectura-variables.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8251fb0[m
+[1m--- /dev/null[m
+[1m+++ b/src/lectura-variables.ts[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32m// Integrar en el servicio existente; no sustituye automáticamente el código de la aplicación.[m
+[32m+[m[32mimport { Injectable } from '@nestjs/common';[m
+[32m+[m
+[32m+[m[32m@Injectable()[m
+[32m+[m[32mexport class ConfiguracionAplicacion {[m
+[32m+[m[32m  readonly ambiente = process.env.AMBIENTE;[m
+[32m+[m[32m  private readonly apiKey = process.env.API_KEY;[m
+[32m+[m
+[32m+[m[32m  constructor() {[m
+[32m+[m[32m    if (!this.ambiente || !this.apiKey) {[m
+[32m+[m[32m      throw new Error('Faltan AMBIENTE o API_KEY');[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Ejemplo de uso sin revelar el secreto en respuestas o logs.[m
+[32m+[m[32m  estado() {[m
+[32m+[m[32m    return { ambiente: this.ambiente, apiKeyConfigurada: Boolean(this.apiKey) };[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m

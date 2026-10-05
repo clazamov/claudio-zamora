@@ -9,6 +9,7 @@ pipeline {
   }
   options { disableConcurrentBuilds(); timestamps() }
   parameters {
+    booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Activar esta rama en el ambiente compartido')
     string(name: 'DOCKERHUB_USER', defaultValue: 'clazamov', description: 'Usuario real de Docker Hub')
     string(name: 'GHCR_USER', defaultValue: 'clazamov', description: 'Usuario/organización GitHub en minúsculas; confirmar')
     string(name: 'KUBECTL_VERSION', defaultValue: 'v1.37.0', description: 'Versión compatible con el servidor; confirmar disponibilidad')
@@ -24,6 +25,15 @@ pipeline {
           if (!(params.DOCKERHUB_USER ==~ /[a-z0-9][a-z0-9_-]*/)) { error('Completa DOCKERHUB_USER válido') }
           if (!(params.GHCR_USER ==~ /[a-z0-9][a-z0-9-]*/)) { error('Completa GHCR_USER válido') }
           if (!(params.KUBECTL_VERSION ==~ /v[0-9]+\.[0-9]+\.[0-9]+/)) { error('Versión kubectl inválida') }
+          if (env.BRANCH_NAME == 'main') {
+            env.APP_AMBIENTE = 'production'
+            env.IMAGE_TAG = 'claudio-zamora-main'
+          } else if (env.BRANCH_NAME == 'developer') {
+            env.APP_AMBIENTE = 'develop'
+            env.IMAGE_TAG = 'claudio-zamora-developer'
+          } else {
+            error('Sólo se permiten las ramas main y developer')
+          }
           env.DOCKER_IMAGE = "docker.io/${params.DOCKERHUB_USER}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
           env.GHCR_IMAGE = "ghcr.io/${params.GHCR_USER}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
         }
@@ -81,7 +91,9 @@ pipeline {
       }
     }
     stage('deploy') {
+      when { expression { return params.DEPLOY } }
       steps {
+        lock(resource: 'despliegue-ns-claudio-zamora') {
         sh '''set -eu
           trap 'rm -f .rendered.yaml' EXIT
           .ci-bin/kubectl get secret secret-claudio-zamora -n ns-claudio-zamora -o name
@@ -90,6 +102,7 @@ pipeline {
           .ci-bin/kubectl rollout restart deployment/app-claudio-zamora -n ns-claudio-zamora
           .ci-bin/kubectl rollout status deployment/app-claudio-zamora -n ns-claudio-zamora --timeout=300s
         '''
+        }
       }
     }
   }
