@@ -16,9 +16,13 @@ spec:
       env:
         - name: DOCKER_HOST
           value: tcp://localhost:2375
-    - name: dind
-      image: docker:27-dind
-      args: ["--host=tcp://127.0.0.1:2375", "--host=unix:///var/run/docker.sock", "--tls=false"]
+        - name: dind
+          image: docker:27-dind
+          args:
+          - dockerd
+          - --host=tcp://127.0.0.1:2375
+          - --host=unix:///var/run/docker.sock
+          - --tls=false
       securityContext:
         privileged: true
       env:
